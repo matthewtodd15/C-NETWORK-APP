@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #include "http.h"
 
-connection connections[MAX_CONNECTIONS];
-int num_conns = 0;
-
-
 int main(int argc, char **argv) {
   int serverfd, clientfd;
   struct sockaddr_in server_addr;
@@ -35,29 +31,9 @@ int main(int argc, char **argv) {
 
   // handle client connections
   for (;;) {
-    HttpRequest *req = malloc(sizeof(HttpRequest));
-    clientfd = accept(serverfd, (struct sockaddr *)&req->client_addr,
-                      &req->client_addr_len);
-    if (clientfd < 0) {
-      perror("Error accepting connection\n");
-      continue;
-    }
-
-    if (num_conns >= MAX_CONNECTIONS) {
-      perror("Error accepting connection: max connections reached, dropping "
-             "connection\n");
-      continue;
-    }
-
-    parse_http_request(clientfd, req);
-
-    // handle routing
-    int result = route_request(clientfd, req);
-    if (result != 0) {
-      perror("Error routing request");
-    }
-
-    free(req);
+    // accept connection
+    // parse the request
+    // route the request (upgrading to websocket if needed)
   }
 
   close(serverfd);
