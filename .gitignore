@@ -1,3 +1,9 @@
+# Ignore all files without extension
+*
+!/**/
+!*.*
+
+# Ignore wsl thing
 *:Zone.Identifier
 
 # Compiled object files
