@@ -1,0 +1,30 @@
+*:Zone.Identifier
+
+# Compiled object files
+*.o
+*.so
+
+# Executable files
+*.exe
+*.out
+
+# Dependency files
+*.d
+
+# Backup files
+*~
+*.bak
+
+# Temporary files
+*.swp
+*.tmp
+
+# Editor backup files
+*.#
+.#*
+*.swo
+
+# Build directories
+build/
+Debug/
+Release/
