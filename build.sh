@@ -2,6 +2,6 @@
 
 OUTPUT="server"
 
-gcc -g -Wall ./src/main.c ./src/http.c -o ${OUTPUT} -lb64 -lpthread -lcrypto
+gcc -g -Wall ./src/*.c -o ${OUTPUT} -lb64 -lcrypto
 
 echo "Built to file: ${OUTPUT}"

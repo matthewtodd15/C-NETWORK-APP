@@ -1,12 +1,8 @@
 #include "http.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <strings.h>
 
-extern connection connections[];
 extern int num_conns;
 
-char *get_header_val(connection *conn, char *key) {
+char *get_header_val(client *conn, char *key) {
   for (int i = 0; i < conn->header_count; i++) {
     if (strcmp(conn->headers[i].key, key) == 0) {
       return strdup(conn->headers[i].value);
@@ -16,25 +12,40 @@ char *get_header_val(connection *conn, char *key) {
   return NULL;
 }
 
-int route_request(connection *conn) {
+char *get_form_val(client *conn, char *key) {
+  for (int i = 0; i < conn->field_count; i++) {
+    if (strcmp(conn->form[i].key, key) == 0) {
+      return strdup(conn->form[i].value);
+    }
+  }
+
+  return NULL;
+}
+
+int route_request(client *conn) {
   if (strcmp(conn->method, "GET") == 0) {
     if (strcmp(conn->path, "/ws") == 0) {
       upgrade_conn(conn);
+      return 1; // tell the caller we have a websocket connection
     } else {
       // Read public asset to buffer
       char path[128] = "public";
 
       strncat(path, conn->path, sizeof(path) - sizeof("public"));
-      if (conn->path[strlen(conn->path) - 1] == '/') {
+      if (conn->path[strlen(conn->path) - 1] ==
+          '/') { // handle paths that end in slash
         strcat(path, "index.html");
+      } else if (strstr(conn->path, ".") ==
+                 NULL) { // handle paths that dont end in slash
+        printf("adding /index.html to path");
+        strcat(path, "/index.html");
       }
+
       FILE *asset_path = fopen(path, "r");
-      if (!asset_path) {
-        if (errno == ENOENT || errno == ENOTDIR) {
-          send_http_response(conn->connfd, NOT_FOUND, "Not Found", NULL);
-        }
+      if (asset_path == NULL) {
         printf("Error opening file: %s\n", path);
-        return 1;
+        send_http_response(conn->fd, NOT_FOUND, "Not Found", NULL);
+        return 0;
       }
 
       size_t ret;
@@ -43,14 +54,39 @@ int route_request(connection *conn) {
       asset_buffer[ret] = '\0';
       fclose(asset_path);
 
-      send_http_response(conn->connfd, OK, "OK", asset_buffer);
+      send_http_response(conn->fd, OK, "OK", asset_buffer);
     }
+  } else if (strcmp(conn->method, "POST") == 0) {
+    if (strcmp(conn->path, "/") == 0) {
+      // authenticate
+      char *username = get_form_val(conn, "username");
+      char *password = get_form_val(conn, "password");
+
+      printf("Credentials: %s %s\n", username, password);
+      if (username == NULL || password == NULL) {
+        send_http_response(conn->fd, 401, "Unauthorized", NULL);
+        return 0;
+      }
+      if (strlen(username) <= 0 || strlen(password) <= 0) {
+        send_http_response(conn->fd, 401, "Unauthorized", NULL);
+        return 0;
+      }
+
+      // set cookie
+      // redirect to dash
+      send_http_redirect(conn->fd, "/dashboard");
+      printf("logged in!\n");
+      return 0;
+    }
+  } else {
+    send_http_response(conn->fd, METHOD_NOT_ALLOWED, "Method Not Allowed",
+                       NULL);
   }
 
   return 0;
 }
 
-char *build_websocket_accept_header(connection *conn) {
+char *build_websocket_accept_header(client *conn) {
   char *encoded;
   char ws_accept[256] = {0};
   unsigned char ws_accept_hash[SHA_DIGEST_LENGTH] = {0};
@@ -79,12 +115,6 @@ char *build_websocket_accept_header(connection *conn) {
   encoded_size += base64_encode_blockend(encoded + encoded_size, &encode_state);
   encoded[encoded_size] = '\0';
 
-  printf("Hex encoded: ");
-  for (int i = 0; i < encoded_size; i++) {
-    printf("%02x ", encoded[i]);
-  }
-  printf("\n");
-
   size_t len = strlen(encoded);
   if (len > 0 && encoded[len - 1] == '\n') {
     encoded[len - 1] = '\0';
@@ -93,108 +123,16 @@ char *build_websocket_accept_header(connection *conn) {
   return encoded;
 }
 
-void send_ws_close(connection *conn) {
-  unsigned char frame[2] = {0}; // 2 bytes for header, max 125 bytes for payload
-
-  frame[0] = 0x88; // fin = 1, opcode = 8 for close
-
-  size_t nsent = send(conn->connfd, frame, 2, 0);
-  printf("data sent: ");
-  for (int i = 0; i < nsent; i++) {
-    printf("%02x ", frame[i]);
-  }
-  printf("\n");
-  printf("sent %zu bytes\n", nsent);
-}
-
-void send_ws_message(connection *conn, char *message, int n) {
-  if (n > 125) {
-    fprintf(stderr, "Error sending ws data: data size %d too large\n", n);
-    return;
-  }
-
-  unsigned char frame[125] = {
-      0}; // 2 bytes for header, max 125 bytes for payload
-
-  frame[0] = 0x81;     // fin = 1, opcode = 1 for text
-  frame[1] = n & 0x7f; // length of data (mask bit always 0) 0111 1111
-
-  memcpy(frame + 2, message, n + 2);
-
-  size_t nsent = write(conn->connfd, frame, n + 2);
-  printf("data sent: ");
-  for (int i = 0; i < nsent; i++) {
-    printf("%02x ", frame[i]);
-  }
-  printf("\n");
-  printf("sent %zu bytes\n", nsent);
-}
-
-int receive_ws_data(connection *conn) {
-  unsigned char buf[1024] = {0};
-  int nread = recv(conn->connfd, buf, sizeof(buf), 0);
-  if (nread == -1) {
-    fprintf(stderr, "Error reading message\n");
-    return 0;
-  }
-
-  int len = buf[1] & 0x7f;
-  unsigned char *mask = buf + 2;
-  unsigned char *message = mask + 4;
-
-  printf("data frame Hex: ");
-  for (int i = 0; i < nread; i++) {
-    printf("%02x ", buf[i]);
-  }
-  printf("\n");
-
-  int opcode = buf[0] & 0x0F;
-  switch (opcode) {
-  case 1:
-    printf("data frame message: ");
-    for (int i = 0; i < len; i++) {
-      char val = message[i] ^ mask[i % 4];
-      printf("%c", val);
-    }
-    printf("\n");
-
-    sleep(5);
-    char message[] = "Hello There";
-    send_ws_message(conn, message, strlen(message));
-    break;
-  case 9:
-    printf("Received Ping\n");
-
-    unsigned char pong[] = {0x8A, 0x00};
-    write(conn->connfd, pong, 2);
-    break;
-  case 8:
-    printf("Websocket close request received\n");
-    send_ws_close(conn);
-    break;
-  default:
-    break;
-  }
-
-  return opcode;
-}
-
-void upgrade_conn(connection *conn) {
+void upgrade_conn(client *conn) {
   char *ws_accept_encoded = build_websocket_accept_header(conn);
   if (ws_accept_encoded == NULL) {
     perror("Error upgrading connection, ws key not found");
-    close(conn->connfd);
+    close(conn->fd);
     exit(EXIT_FAILURE);
   }
 
   // upgrade handshake
-  send_ws_upgrade_response(conn->connfd, ws_accept_encoded);
-  for (;;) {
-    if (receive_ws_data(conn) == 8) {
-      break;
-    }
-  }
-  printf("Closing connection\n");
+  send_ws_upgrade_response(conn->fd, ws_accept_encoded);
 }
 
 void add_header(http_response *response, char *key, char *value) {
@@ -232,7 +170,6 @@ char *http_res_tostr(http_response *res) {
   int n = 0;
   nwritten += sprintf(response, "%s\r\n", res->version_line);
   while (n < res->header_count && nwritten < 1024) {
-    printf("header");
     nwritten += sprintf(response + nwritten, "%s: %s\r\n", res->headers[n].key,
                         res->headers[n].value);
     n++;
@@ -249,13 +186,30 @@ char *http_res_tostr(http_response *res) {
   return response;
 }
 
+int send_http_redirect(int fd, char *url) {
+  http_response *res = build_http_response(302, "Found");
+
+  add_header(res, "Location", url);
+  add_header(res, "Connection", "close");
+  char *response = http_res_tostr(res);
+  int n = write(fd, response, strlen(response));
+  printf("--- Sent %d byte Response ---\n%s\n", n, response);
+
+  free(response);
+  return 0;
+}
+
 int send_http_response(int fd, int status_code, char *message, char *content) {
   http_response *res = build_http_response(status_code, message);
   char content_len[20]; // long between 2 and 20 bytes
 
   res->body = content;
 
-  sprintf(content_len, "%ld", strlen(content));
+  if (content != NULL) {
+    sprintf(content_len, "%ld", strlen(content));
+  } else {
+    sprintf(content_len, "%d", 0);
+  }
 
   add_header(res, "Accept-Ranges", "bytes");
   add_header(res, "Content-Length", content_len);
@@ -269,27 +223,35 @@ int send_http_response(int fd, int status_code, char *message, char *content) {
   return 0;
 }
 
-int parse_http_request(connection *conn) {
-  char buf[1024] = {0};
-  size_t nread = read(conn->connfd, buf, sizeof(buf));
+int parse_http_request(client *conn) {
+  char *buf = malloc(2048);
+  bzero(buf, 2048);
+  size_t nread = read(conn->fd, buf, 2048);
+  if (nread == -1) {
+    perror("Error reading request");
+    return 1;
+  }
+  // (because of io multiplexing)
   printf("Received request: %s\n", buf);
 
   // open buffer for parsing headers
   FILE *stream = fmemopen(buf, nread, "r");
   if (stream == NULL) {
     perror("Error opening client stream");
-    return 1;
+    return 2;
   }
 
   conn->header_count = 0;
+  conn->field_count = 0;
 
   char *line;
-  size_t line_len;
+  size_t line_len = 0;
   getline(&line, &line_len, stream);
   sscanf(line, "%s %s", conn->method, conn->path);
 
   // read headers into memory
-  while (getline(&line, &line_len, stream) > 0 &&
+  // if read is not greater than 1 then we have a double new line
+  while (getline(&line, &line_len, stream) > 2 &&
          conn->header_count < MAX_HEADERS) {
     header *h = &(conn->headers[conn->header_count]);
     sscanf(line, "%s %s", h->key, h->value);
@@ -297,28 +259,37 @@ int parse_http_request(connection *conn) {
     conn->header_count++;
   }
 
-  fclose(stream);
+  // if post, we want to parse the form
+  if (strcmp(conn->method, "POST") == 0) {
+    // skip extra new line
+    getline(&line, &line_len, stream);
+    // form should be encoded into 1 line
+    getline(&line, &line_len, stream);
+
+    while (conn->field_count < MAX_FORM_FIELDS) {
+      form_field *f = &(conn->form[conn->field_count]);
+      char *equal_idx = strstr(line, "=");
+      char *and_idx = strstr(line, "&");
+      // end string at equals for parsing
+      *equal_idx = '\0';
+      if (and_idx != NULL) {
+        *and_idx = '\0';
+      }
+      strncpy(f->key, line, MAX_FORM_KEY_SIZE);
+      strncpy(f->value, equal_idx + 1, MAX_FORM_KEY_SIZE);
+      conn->field_count++;
+
+      // if no &, we've parsed the last field
+      if (and_idx == NULL) {
+        break;
+      }
+      // else move to next value
+      line = and_idx + 1;
+    }
+  }
+
+  fclose(stream); // Must close stream first
+  free(buf);
+  // free(line);
   return 0;
-}
-
-void *handle_conn(void *arg) {
-  int conn_id = *(int *)arg;
-  connection conn_info = connections[conn_id];
-  printf("%d, %d\n", conn_id, conn_info.connfd);
-
-  if (conn_info.connfd < 0) {
-    perror("Connection fd not found");
-    pthread_exit((void *)1);
-  }
-
-  parse_http_request(&conn_info);
-
-  // handle routing
-  int result = route_request(&conn_info);
-  if (result != 0) {
-    perror("Error routing request");
-  }
-
-  close(conn_info.connfd);
-  pthread_exit(NULL);
 }
