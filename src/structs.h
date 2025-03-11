@@ -46,11 +46,11 @@ struct Player {
   int player_id;
   string name;
   bool isReady;
-}
+};
 
 struct Game {
   int game_id;
   Player player1;
   Player player2;
-}
+};
 #endif
