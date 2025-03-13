@@ -33,4 +33,11 @@
 #define OK 200
 #define METHOD_NOT_ALLOWED 405
 
+// game defs
+#define P1 0
+#define P2 1
+#define bool int
+#define TRUE 1
+#define FALSE 0
+
 #endif

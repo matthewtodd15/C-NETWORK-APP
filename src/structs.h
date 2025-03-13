@@ -42,4 +42,23 @@ struct {
   unsigned char message[MAX_WS_MSG_SIZE];
 } typedef ws_frame;
 
+
+// game structs
+struct {
+  uint64_t p1_board;
+  uint64_t p1_shot_board;
+  uint64_t p1_hit_board; // might need this to track hits specifically
+  uint64_t *p1_ships;    // 1a, 1b, 2a, 2b, 3, 4
+
+  uint64_t p2_board;
+  uint64_t p2_shot_board;
+  uint64_t p2_hit_board; 
+  uint64_t *p2_ships;
+
+  int8_t winner; // default to -1
+
+  // other stuff we talked about here
+} typedef game_data;
+
+
 #endif
