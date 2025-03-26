@@ -40,4 +40,68 @@
 #define TRUE 1
 #define FALSE 0
 
+/**
+* Below are some of the opcodes for our game 
+* protocol (subject to change). Server and client
+* will send messages back and forth with information
+* of these types
+*
+* How do we secure this so users can't intercept or
+* inject game messages? Do we send a token with the
+* websocket msgs?
+*
+* TO SECURE PACKETS - encode the packet with an auth
+* key given to the user at game time that includes the
+* user_id and game_id.
+*/
+
+// client -> server (put me in a game)
+#define GAME_MSG_READY 0 
+// in case of disconnect or refresh (includes all game data needed client-side
+#define GAME_MSG_SYNC 1 
+// client -> server (my board is ready, validate it)
+#define GAME_MSG_BOARD_SETUP 2 
+// server -> client (all)
+#define GAME_MSG_TURN 4 
+// client -> server (x, y)
+#define GAME_MSG_SHOT 5 
+#define GAME_MSG_RESIGN 6 
+// general error 
+#define GAME_MSG_ERROR 7 
+#define GAME_MSG_CLOSE 8 
+// are we still in active game?
+#define GAME_MSG_PING 9 
+// game still active
+#define GAME_MSG_PONG 10 
+
+/**
+  * General packet structure:
+  * 
+  * 4 bits - opcode
+  * _ bits (defined by opcode) - args
+  * ... more args
+  * ____ ____ ____
+  * opcd arg1 arg2
+  *
+  * Example from client: Shot packet with coordinates x=2, y=3
+  *
+  * 4 bits - opcode
+  * 4 bits - x coord
+  * 4 bits - y coord
+  * 1 bit - hit true or false
+  *
+  * 0101 010 011 0
+  *
+  * Example response to all clients: hit
+  *
+  * 4 bits - opcode
+  * 4 bits - x coord
+  * 4 bits - y coord
+  * 1 bit - hit true or false
+  *
+  * 0101 010 011 1
+  * 
+  *
+  */
+
 #endif

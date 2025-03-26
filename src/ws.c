@@ -1,7 +1,5 @@
 #include "ws.h"
 
-extern int num_conns;
-
 void send_ws_close(client *conn) {
   unsigned char frame[2] = {0}; // 2 bytes for header, max 125 bytes for payload
 
