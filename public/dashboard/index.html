@@ -4,9 +4,34 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Battleship Home</title>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f0f0;
+        font-family: Arial, sans-serif;
+      }
+      h1 {
+        margin-bottom: 20px;
+      }
+      canvas {
+        border: 1px solid black;
+      }
+      #status {
+        margin-top: 20px;
+      }
+    </style>
   </head>
   <body>
-    <h2>Dashboard</h2>
+    <h1>Your Board</h1>
+    <canvas id="gridCanvas" width="400" height="400"></canvas>
+    <div id="status">Place your 4-sized ship...</div>
+
     <script type="text/javascript" src="dashboard/index.js"></script>
+    <script type="text/javascript" src="dashboard/game.js"></script>
   </body>
 </html>

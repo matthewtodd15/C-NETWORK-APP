@@ -1,4 +1,6 @@
 #include "http.h"
+#include "defs.h"
+#include <stdlib.h>
 
 extern int num_conns;
 
@@ -49,8 +51,8 @@ int route_request(client *conn) {
       }
 
       size_t ret;
-      char asset_buffer[1024];
-      ret = fread(asset_buffer, 1, sizeof(asset_buffer) - 1, asset_path);
+      char* asset_buffer = malloc(MAX_RESPONSE_SIZE);
+      ret = fread(asset_buffer, 1, MAX_RESPONSE_SIZE - 1, asset_path);
       asset_buffer[ret] = '\0';
       fclose(asset_path);
 
@@ -73,7 +75,6 @@ int route_request(client *conn) {
       }
 
       // set cookie
-      // redirect to dash
       send_http_redirect(conn->fd, "/dashboard");
       printf("logged in!\n");
       return 0;
@@ -151,7 +152,7 @@ http_response *build_http_response(int status_code, char *message) {
 }
 
 int send_ws_upgrade_response(int fd, char *encoded_key) {
-  char response[1024] = {0};
+  char* response = malloc(MAX_RESPONSE_SIZE);
   int n = sprintf(
       response,
       "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: "
@@ -164,12 +165,12 @@ int send_ws_upgrade_response(int fd, char *encoded_key) {
 }
 
 char *http_res_tostr(http_response *res) {
-  char *response = malloc(1024); // TODO: make constant #define
-  bzero(response, 1024);
+  char *response = malloc(MAX_RESPONSE_SIZE); 
+  bzero(response, MAX_RESPONSE_SIZE);
   int nwritten = 0;
   int n = 0;
   nwritten += sprintf(response, "%s\r\n", res->version_line);
-  while (n < res->header_count && nwritten < 1024) {
+  while (n < res->header_count && nwritten < MAX_RESPONSE_SIZE) {
     nwritten += sprintf(response + nwritten, "%s: %s\r\n", res->headers[n].key,
                         res->headers[n].value);
     n++;
@@ -182,7 +183,7 @@ char *http_res_tostr(http_response *res) {
     nwritten += sprintf(response + nwritten, "%s\r\n\r\n", res->body);
   }
 
-  response[nwritten] = '\0';
+  response[nwritten + 1] = '\0';
   return response;
 }
 
