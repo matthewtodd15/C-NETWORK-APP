@@ -51,8 +51,8 @@ int route_request(client *conn) {
       }
 
       size_t ret;
-      char* asset_buffer = malloc(MAX_RESPONSE_SIZE);
-      ret = fread(asset_buffer, 1, MAX_RESPONSE_SIZE - 1, asset_path);
+      char* asset_buffer = malloc(MAX_RESPONSE_FILE_SIZE);
+      ret = fread(asset_buffer, 1, MAX_RESPONSE_FILE_SIZE - 1, asset_path);
       asset_buffer[ret] = '\0';
       fclose(asset_path);
 

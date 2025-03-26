@@ -14,7 +14,8 @@
 #define MAX_FORM_VAL_SIZE 128
 #define MAX_HEADERS 30
 #define MAX_FORM_FIELDS 20
-#define MAX_RESPONSE_SIZE 4096
+#define MAX_RESPONSE_SIZE 4096 * 2
+#define MAX_RESPONSE_FILE_SIZE 4096
 
 #define MAX_WS_FRAME_SIZE 132 // header (2) + mask (4) + msg (126)
 #define MAX_WS_MSG_SIZE 126   // message at most 126 bytes
