@@ -43,7 +43,8 @@ void close_client(client *client, fd_set *allset);
  */
 void process_clients(int sockfd);
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   int serverfd = -1;
 
   setup_socket(&serverfd);
@@ -53,7 +54,8 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-void setup_socket(int *sockfd_ptr) {
+void setup_socket(int *sockfd_ptr)
+{
   struct sockaddr_in serv_addr;
 
   *sockfd_ptr = socket(AF_INET, SOCK_STREAM, 0);
@@ -97,7 +99,8 @@ void setup_socket(int *sockfd_ptr) {
   }
 }
 
-client *accept_conn(int sockfd, client **clients, int *maxi) {
+client *accept_conn(int sockfd, client **clients, int *maxi)
+{
   // check param
   if (sockfd < 0) {
     fprintf(stderr, "Error invalid fd at accept_conn: %d\n", sockfd);
@@ -127,7 +130,8 @@ client *accept_conn(int sockfd, client **clients, int *maxi) {
     i++;
   if (i < FD_SETSIZE) {
     clients[i] = newClient;
-  } else {
+  }
+  else {
     fprintf(stderr, "Too many clients!\n");
     exit(EXIT_FAILURE);
   }
@@ -140,13 +144,15 @@ client *accept_conn(int sockfd, client **clients, int *maxi) {
   return newClient;
 }
 
-void close_client(client *client, fd_set *allset) {
+void close_client(client *client, fd_set *allset)
+{
   close(client->fd);
   FD_CLR(client->fd, allset);
   free(client);
 }
 
-void process_clients(int sockfd) {
+void process_clients(int sockfd)
+{
   // check param
   if (sockfd < 0) {
     fprintf(stderr, "Error invalid fd at process_clients: %d\n", sockfd);
@@ -196,7 +202,8 @@ void process_clients(int sockfd) {
         if (receive_ws_data(frame, clients[i]) == OP_CLOSE) {
           close_client(clients[i], &allset);
           clients[i] = NULL;
-        } else {
+        }
+        else {
           switch (frame->opcode) {
           case OP_TEXT:
             printf("data frame message: ");
