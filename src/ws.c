@@ -1,3 +1,4 @@
+#include "queueh.h"
 #include "ws.h"
 
 void send_ws_close(client *conn) {
@@ -57,3 +58,12 @@ int receive_ws_data(ws_frame* dst_frame, client *conn) {
 
   return dst_frame->opcode;
 }
+
+
+/* Need to add a handle_client_data function, where the "when_ready" flag should be checked, used for matchmaking
+* Need to check if client pressed ready, add that client to queue, attempt to find a match and create game
+* Can get the game object using the index
+* At this point, both clients would know they've been matched, and they would have game_id in their messages
+*
+* Dont forget to call init_queue() in the main server setup
+*/ 
