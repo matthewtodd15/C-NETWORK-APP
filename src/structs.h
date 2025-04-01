@@ -58,7 +58,7 @@ struct {
   int8_t winner; // default to -1
 
   // other stuff we talked about here
-} typedef game_data;
+} typedef game_t;
 
 
 #endif
