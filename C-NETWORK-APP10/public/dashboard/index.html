@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Battleship Home</title>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: white;
+        font-family: Arial, sans-serif;
+      }
+      canvas {
+        border: none;
+      }
+
+      .control-panel {
+        display: grid;
+        gap: 1rem;
+        padding: 1rem;
+        grid-template-columns: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Team5 Battleship</h2>
+    <p id="status-text">
+      Welcome to Team5 Battleship: Click JOIN GAME to start
+    </p>
+    <div style="display: grid; grid-template-columns: auto auto">
+      <canvas id="gridCanvas" width="800" height="500"></canvas>
+      <div id="control-panel" class="control-panel">
+        <h3>Game Controls</h3>
+        <button onclick="handleJoinGame()">Ready Up</button>
+        <button onclick="handleConfirmPosition()">Confirm Position</button>
+        <button onclick="handleSendShot()">Fire!</button>
+        <button onclick="handleResign()">Resign</button>
+        <button onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+    <div style="display: none">
+      <img id="cursor" src="/dashboard/cursor.png" alt="" />
+      <img id="battleships" src="/dashboard/battleships.png" alt="" />
+      <img id="waves1" src="/dashboard/waves1.png" alt="" />
+      <img id="waves2" src="/dashboard/waves2.png" alt="" />
+    </div>
+    <script type="text/javascript" src="/dashboard/index.js"></script>
+    <script type="text/javascript" src="/dashboard/controls.js"></script>
+    <script type="text/javascript" src="/dashboard/cursor.js"></script>
+    <script type="text/javascript" src="/dashboard/ships.js"></script>
+    <script type="text/javascript" src="/dashboard/playerBoard.js"></script>
+    <script type="text/javascript" src="/dashboard/gameSetup.js"></script>
+    <script type="text/javascript" src="/dashboard/game.js"></script>
+    <script type="text/javascript" src="/dashboard/waves.js"></script>
+  </body>
+</html>
